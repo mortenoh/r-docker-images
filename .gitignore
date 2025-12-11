@@ -1,0 +1,26 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker
+*.tar
+*.tar.gz
+
+# R
+.Rhistory
+.Rdata
+.RData
+.Ruserdata
+*.Rproj.user/
+
+# Temporary files
+tmp/
+*.tmp
+*.log
