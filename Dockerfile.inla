@@ -1,0 +1,66 @@
+# Dockerfile.inla
+# Single-stage: Ubuntu 24.04 + CRAN R + INLA (with fmesher)
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Locale (UTF-8 for R)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends locales \
+  && locale-gen en_US.UTF-8 \
+  && update-locale LANG=en_US.UTF-8 \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV LANG=en_US.UTF-8 \
+  LC_ALL=en_US.UTF-8
+
+# Basic tools + HTTPS + GPG
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  wget \
+  ca-certificates \
+  gnupg \
+  && rm -rf /var/lib/apt/lists/*
+
+# CRAN key + repo for Ubuntu 24.04 (noble)
+RUN wget -qO /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
+  https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc \
+  && echo "deb https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/" \
+  > /etc/apt/sources.list.d/cran-r.list
+
+# R + toolchain needed to build INLA and its deps
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  r-base \
+  r-base-dev \
+  build-essential \
+  gfortran \
+  libcurl4-openssl-dev \
+  libssl-dev \
+  libxml2-dev \
+  # Dependencies for sf package (spatial features)
+  libgdal-dev \
+  libgeos-dev \
+  libproj-dev \
+  # Dependencies for units package
+  libudunits2-dev \
+  # Dependencies for s2 and nloptr packages
+  cmake \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install fmesher + INLA + additional packages for INLA_baseline_model
+RUN R -q -e "install.packages('fmesher', \
+  repos = c('https://cloud.r-project.org', \
+  INLA = 'https://inla.r-inla-download.org/R/stable'))" \
+  && R -q -e "install.packages('INLA', \
+  repos = c('https://cloud.r-project.org', \
+  INLA = 'https://inla.r-inla-download.org/R/stable'), \
+  dep = TRUE)" \
+  && R -q -e "install.packages(c('dlnm', 'yaml', 'jsonlite', 'dplyr', 'sf', 'spdep'), repos='https://cloud.r-project.org')" \
+  && R -q -e "library(INLA); INLA::inla.prune()"
+
+WORKDIR /workspace
+
+# Default: drop into R shell
+CMD ["R"]

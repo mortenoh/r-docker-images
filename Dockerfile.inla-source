@@ -1,0 +1,126 @@
+# Dockerfile.inla-source
+# Build INLA from source for native multi-arch support (amd64 + arm64)
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Locale (UTF-8 for R)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends locales \
+  && locale-gen en_US.UTF-8 \
+  && update-locale LANG=en_US.UTF-8 \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV LANG=en_US.UTF-8 \
+  LC_ALL=en_US.UTF-8
+
+# Basic tools + HTTPS + GPG
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  wget \
+  ca-certificates \
+  gnupg \
+  git \
+  rsync \
+  && rm -rf /var/lib/apt/lists/*
+
+# CRAN key + repo for Ubuntu 24.04 (noble)
+RUN wget -qO /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
+  https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc \
+  && echo "deb https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/" \
+  > /etc/apt/sources.list.d/cran-r.list
+
+# R + full build toolchain + INLA build dependencies
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  r-base \
+  r-base-dev \
+  build-essential \
+  gfortran \
+  cmake \
+  # R package dependencies
+  libcurl4-openssl-dev \
+  libssl-dev \
+  libxml2-dev \
+  # INLA build dependencies (from build-user/linux/Makefile)
+  liblapack-dev \
+  libgsl-dev \
+  zlib1g-dev \
+  libsuitesparse-dev \
+  libmetis-dev \
+  libxdmcp-dev \
+  libc6-dev \
+  libatlas-base-dev \
+  libblas-dev \
+  libmuparser-dev \
+  r-mathlib \
+  # sf/spatial dependencies
+  libgdal-dev \
+  libgeos-dev \
+  libproj-dev \
+  libudunits2-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+# Set up build directories
+ENV PREFIX=/opt/local
+ENV LIBPREFIX=${PREFIX}/lib
+ENV BINPREFIX=${PREFIX}/bin
+ENV INCPREFIX=${PREFIX}/include
+
+RUN mkdir -p ${LIBPREFIX} ${BINPREFIX} ${INCPREFIX}
+
+# Clone INLA source (use git instead of hg)
+RUN git clone --depth 1 --branch devel https://github.com/hrue/r-inla.git /opt/r-inla
+RUN ln -sf ${PREFIX} /opt/r-inla/local
+
+WORKDIR /opt/r-inla
+
+# Build taucs (extract tarball first, patch x86-specific flags for arm64)
+RUN mkdir -p /tmp/taucs \
+  && tar -xzf /opt/r-inla/extlibs/taucs-2.2--my-fix.tgz -C /tmp/taucs --strip-components=1 \
+  && cd /tmp/taucs \
+  # Remove x86-specific compiler flags for arm64 compatibility
+  && sed -i 's/-mfpmath=sse//g; s/-msse4//g; s/-march=native/-march=native/g' build/linux/makefile config/linux.mk \
+  && make -j$(nproc) \
+  && mkdir -p /tmp/taucs/lib/linux \
+  && cp -f /tmp/taucs/lib/linux/libtaucs.a ${LIBPREFIX}/ || cp -f /tmp/taucs/libtaucs.a ${LIBPREFIX}/ \
+  && rm -rf /tmp/taucs
+
+# Build fmesher
+RUN make -C /opt/r-inla/fmesher PREFIX=${PREFIX} -j$(nproc) \
+  && make -C /opt/r-inla/fmesher PREFIX=${PREFIX} install \
+  && cp ${PREFIX}/bin/fmesher ${BINPREFIX}/fmesher64 || true
+
+# Build GMRFLib
+RUN make -C /opt/r-inla/gmrflib PREFIX=${PREFIX} -j$(nproc) \
+  && make -C /opt/r-inla/gmrflib PREFIX=${PREFIX} install
+
+# Create muParser include symlink
+RUN ln -sf /usr/include ${INCPREFIX}/muParser
+
+# Build inla program
+RUN make -C /opt/r-inla/inlaprog PREFIX=${PREFIX} -j$(nproc) \
+  && make -C /opt/r-inla/inlaprog PREFIX=${PREFIX} install \
+  && cp ${PREFIX}/bin/inla ${BINPREFIX}/inla64 || true
+
+# Copy binaries to R package location
+RUN mkdir -p /opt/r-inla/rinla/inst/bin/linux/64bit \
+  && cp ${BINPREFIX}/inla64 /opt/r-inla/rinla/inst/bin/linux/64bit/inla || cp ${PREFIX}/bin/inla /opt/r-inla/rinla/inst/bin/linux/64bit/inla \
+  && cp ${BINPREFIX}/fmesher64 /opt/r-inla/rinla/inst/bin/linux/64bit/fmesher || cp ${PREFIX}/bin/fmesher /opt/r-inla/rinla/inst/bin/linux/64bit/fmesher
+
+# Build and install R package
+RUN cd /opt/r-inla && R CMD build rinla && R CMD INSTALL INLA_*.tar.gz
+
+# Install fmesher R package and additional packages for INLA_baseline_model
+RUN R -q -e "install.packages(c('fmesher', 'dlnm', 'yaml', 'jsonlite', 'dplyr', 'sf', 'spdep'), repos='https://cloud.r-project.org')"
+
+# Prune INLA cache
+RUN R -q -e "library(INLA); INLA::inla.prune()"
+
+# Cleanup build artifacts
+RUN rm -rf /opt/r-inla /tmp/*
+
+WORKDIR /workspace
+
+CMD ["R"]

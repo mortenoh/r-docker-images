@@ -1,0 +1,121 @@
+# Dockerfile.inla-mini
+# Multi-stage: build INLA in a dev image, then copy into a minimal runtime
+
+#############################
+# Stage 1: build INLA
+#############################
+FROM ubuntu:24.04 AS inla-builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Locale
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends locales \
+  && locale-gen en_US.UTF-8 \
+  && update-locale LANG=en_US.UTF-8 \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV LANG=en_US.UTF-8 \
+  LC_ALL=en_US.UTF-8
+
+# Tools + HTTPS + GPG
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  wget \
+  ca-certificates \
+  gnupg \
+  && rm -rf /var/lib/apt/lists/*
+
+# CRAN key + repo for Ubuntu 24.04 (noble)
+RUN wget -qO /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
+  https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc \
+  && echo "deb https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/" \
+  > /etc/apt/sources.list.d/cran-r.list
+
+# Full R + build toolchain and headers
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  r-base \
+  r-base-dev \
+  build-essential \
+  gfortran \
+  libcurl4-openssl-dev \
+  libssl-dev \
+  libxml2-dev \
+  # Dependencies for sf package (spatial features)
+  libgdal-dev \
+  libgeos-dev \
+  libproj-dev \
+  # Dependencies for units package
+  libudunits2-dev \
+  # Dependencies for s2 and nloptr packages
+  cmake \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install fmesher + INLA + additional packages for INLA_baseline_model
+RUN R -q -e "install.packages('fmesher', \
+  repos = c('https://cloud.r-project.org', \
+  INLA = 'https://inla.r-inla-download.org/R/stable'))" \
+  && R -q -e "install.packages('INLA', \
+  repos = c('https://cloud.r-project.org', \
+  INLA = 'https://inla.r-inla-download.org/R/stable'), \
+  dep = TRUE)" \
+  && R -q -e "install.packages(c('dlnm', 'yaml', 'jsonlite', 'dplyr', 'sf', 'spdep'), repos='https://cloud.r-project.org')" \
+  && R -q -e "library(INLA); INLA::inla.prune()"
+# At this point, INLA + deps are in /usr/local/lib/R/site-library
+
+
+#############################
+# Stage 2: minimal runtime
+#############################
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Locale in runtime
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends locales \
+  && locale-gen en_US.UTF-8 \
+  && update-locale LANG=en_US.UTF-8 \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV LANG=en_US.UTF-8 \
+  LC_ALL=en_US.UTF-8
+
+# Basic tools + HTTPS (no compilers)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  wget \
+  ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+# CRAN key + repo (so r-base is same build as builder stage)
+RUN wget -qO /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
+  https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc \
+  && echo "deb https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/" \
+  > /etc/apt/sources.list.d/cran-r.list
+
+# Minimal R runtime + non-dev shared libs
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  r-base \
+  libcurl4 \
+  libssl3 \
+  libxml2 \
+  # Runtime libraries for sf package
+  libgdal34t64 \
+  libgeos-c1t64 \
+  libgeos3.12.1t64 \
+  libproj25 \
+  # Runtime library for units package
+  libudunits2-0 \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+# Copy INLA and its R dependencies from the builder
+COPY --from=inla-builder /usr/local/lib/R/site-library /usr/local/lib/R/site-library
+
+WORKDIR /workspace
+
+# Drop into R shell by default
+CMD ["R"]
