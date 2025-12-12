@@ -64,9 +64,10 @@ test-inla-mini:
 	@echo "Testing $(INLA_MINI_IMAGE) with INLA_baseline_model..."
 	docker run --rm --platform linux/amd64 -v $(PWD)/test-repos/INLA_baseline_model:/app -w /app $(INLA_MINI_IMAGE):latest Rscript isolated_run.R
 
-# Clean: remove all images
+# Clean: remove all images (force, ignore errors)
 .PHONY: clean
 clean:
-	-docker rmi $(BASE_IMAGE):latest
-	-docker rmi $(INLA_IMAGE):latest
-	-docker rmi $(INLA_MINI_IMAGE):latest
+	@docker rmi -f $(BASE_IMAGE):latest 2>/dev/null || true
+	@docker rmi -f $(INLA_IMAGE):latest 2>/dev/null || true
+	@docker rmi -f $(INLA_MINI_IMAGE):latest 2>/dev/null || true
+	@echo "Cleaned"
