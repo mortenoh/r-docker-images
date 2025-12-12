@@ -39,13 +39,13 @@ build-inla:
 build-inla-mini:
 	docker build --quiet --no-cache --platform linux/amd64 -t $(INLA_MINI_IMAGE):latest -f Dockerfile.inla-mini .
 
-# Show image sizes in a nice table
+# Show image sizes (virtual size includes shared base layers)
 .PHONY: size
 size:
-	@echo "Image sizes:"
-	@docker images $(BASE_IMAGE) --format "  $(BASE_IMAGE): \t{{.Size}}"
-	@docker images $(INLA_IMAGE) --format "  $(INLA_IMAGE): \t{{.Size}}"
-	@docker images $(INLA_MINI_IMAGE) --format "  $(INLA_MINI_IMAGE): \t{{.Size}}"
+	@echo "Image sizes (virtual / unique content):"
+	@docker images $(BASE_IMAGE):latest --format "  $(BASE_IMAGE):\t{{.Size}}" 2>/dev/null || echo "  $(BASE_IMAGE):\tnot built"
+	@docker images $(INLA_IMAGE):latest --format "  $(INLA_IMAGE):\t{{.Size}}" 2>/dev/null || echo "  $(INLA_IMAGE):\tnot built"
+	@docker images $(INLA_MINI_IMAGE):latest --format "  $(INLA_MINI_IMAGE):\t{{.Size}}" 2>/dev/null || echo "  $(INLA_MINI_IMAGE):\tnot built"
 
 # Test targets
 .PHONY: test test-base test-inla test-inla-mini
