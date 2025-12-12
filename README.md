@@ -1,5 +1,8 @@
 # R Docker Images
 
+[![Build](https://github.com/mortenoh/r-docker-images/actions/workflows/build.yml/badge.svg)](https://github.com/mortenoh/r-docker-images/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Docker images for R with optional INLA (Integrated Nested Laplace Approximation) support.
 
 ## Images
