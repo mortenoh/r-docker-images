@@ -7,8 +7,8 @@ Docker images for R with optional INLA (Integrated Nested Laplace Approximation)
 | Image | Size | Architecture | Description |
 |-------|------|--------------|-------------|
 | `my-r-base` | ~437 MB | amd64, arm64 | Base R runtime |
-| `my-r-inla` | ~2.1 GB | amd64 only | R + INLA + full build tools |
-| `my-r-inla-mini` | ~850 MB | amd64 only | R + INLA optimized (no build tools) |
+| `my-r-inla` | ~550 MB | amd64 only | R + INLA + build tools |
+| `my-r-inla-mini` | ~250 MB | amd64 only | R + INLA optimized (no build tools) |
 
 **Note:** INLA only provides x86_64 Linux binaries. The INLA images must be built and run with `--platform linux/amd64` on ARM systems (e.g., Apple Silicon).
 
@@ -52,6 +52,7 @@ docker run --rm --platform linux/amd64 \
 ### my-r-inla / my-r-inla-mini
 - INLA (Bayesian inference)
 - fmesher (mesh generation for INLA)
+- sn (skew-normal distributions, for posterior sampling)
 - sf (spatial features)
 - spdep (spatial dependence)
 - dplyr (data manipulation)
@@ -82,9 +83,9 @@ INLA downloads precompiled x86_64 binaries during installation. There is no nati
 
 ## Optimizations
 
-The mini image achieves ~60% size reduction through:
-- Multi-stage build (build tools not in final image)
+The images achieve 80-87% size reduction compared to naive builds through:
 - `dep=FALSE` for INLA (avoids installing 150+ suggested packages)
+- Multi-stage build for mini image (build tools not in final image)
 - Stripped debug symbols from shared libraries
 - Removed help/doc/html files from R packages
 
