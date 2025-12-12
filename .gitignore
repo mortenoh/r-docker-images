@@ -24,3 +24,6 @@ Thumbs.db
 tmp/
 *.tmp
 *.log
+
+# Test output
+test-repos/**/predictions.csv
