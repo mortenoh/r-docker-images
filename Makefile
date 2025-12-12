@@ -33,11 +33,11 @@ build-base:
 
 .PHONY: build-inla
 build-inla:
-	docker build --quiet --no-cache -t $(INLA_IMAGE):latest -f Dockerfile.inla .
+	docker build --quiet --no-cache --platform linux/amd64 -t $(INLA_IMAGE):latest -f Dockerfile.inla .
 
 .PHONY: build-inla-mini
 build-inla-mini:
-	docker build --quiet --no-cache -t $(INLA_MINI_IMAGE):latest -f Dockerfile.inla-mini .
+	docker build --quiet --no-cache --platform linux/amd64 -t $(INLA_MINI_IMAGE):latest -f Dockerfile.inla-mini .
 
 # Show image sizes in a nice table
 .PHONY: size
@@ -58,11 +58,11 @@ test-base:
 
 test-inla:
 	@echo "Testing $(INLA_IMAGE) with INLA_baseline_model..."
-	docker run --rm -v $(PWD)/test-repos/INLA_baseline_model:/app -w /app $(INLA_IMAGE):latest Rscript isolated_run.R
+	docker run --rm --platform linux/amd64 -v $(PWD)/test-repos/INLA_baseline_model:/app -w /app $(INLA_IMAGE):latest Rscript isolated_run.R
 
 test-inla-mini:
 	@echo "Testing $(INLA_MINI_IMAGE) with INLA_baseline_model..."
-	docker run --rm -v $(PWD)/test-repos/INLA_baseline_model:/app -w /app $(INLA_MINI_IMAGE):latest Rscript isolated_run.R
+	docker run --rm --platform linux/amd64 -v $(PWD)/test-repos/INLA_baseline_model:/app -w /app $(INLA_MINI_IMAGE):latest Rscript isolated_run.R
 
 # Clean: remove all images
 .PHONY: clean

@@ -52,16 +52,23 @@ RUN apt-get update \
   cmake \
   && rm -rf /var/lib/apt/lists/*
 
-# Install fmesher + INLA + additional packages for INLA_baseline_model
+# Install fmesher + INLA (dep=FALSE to avoid huge Suggests) + required packages
 RUN R -q -e "install.packages('fmesher', \
   repos = c('https://cloud.r-project.org', \
   INLA = 'https://inla.r-inla-download.org/R/stable'))" \
   && R -q -e "install.packages('INLA', \
   repos = c('https://cloud.r-project.org', \
   INLA = 'https://inla.r-inla-download.org/R/stable'), \
-  dep = TRUE)" \
-  && R -q -e "install.packages(c('dlnm', 'yaml', 'jsonlite', 'dplyr', 'sf', 'spdep'), repos='https://cloud.r-project.org')" \
+  dep = FALSE)" \
+  && R -q -e "install.packages(c('dlnm', 'yaml', 'jsonlite', 'dplyr', 'sf', 'spdep', 'sn'), repos='https://cloud.r-project.org')" \
   && R -q -e "library(INLA); INLA::inla.prune()"
+
+# Strip debug symbols and remove unnecessary files to reduce size
+RUN find /usr/local/lib/R/site-library -name "*.so" -exec strip --strip-debug {} \; 2>/dev/null || true \
+  && find /usr/local/lib/R/site-library -type d -name "help" -exec rm -rf {} + 2>/dev/null || true \
+  && find /usr/local/lib/R/site-library -type d -name "doc" -exec rm -rf {} + 2>/dev/null || true \
+  && find /usr/local/lib/R/site-library -type d -name "html" -exec rm -rf {} + 2>/dev/null || true \
+  && find /usr/local/lib/R/site-library -name "*.pdf" -delete 2>/dev/null || true
 # At this point, INLA + deps are in /usr/local/lib/R/site-library
 
 
