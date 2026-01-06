@@ -60,7 +60,7 @@ RUN R -q -e "install.packages('fmesher', \
   repos = c('https://cloud.r-project.org', \
   INLA = 'https://inla.r-inla-download.org/R/stable'), \
   dep = FALSE)" \
-  && R -q -e "install.packages(c('dlnm', 'yaml', 'jsonlite', 'dplyr', 'sf', 'spdep', 'sn'), repos='https://cloud.r-project.org')" \
+  && R -q -e "install.packages(c('dlnm', 'yaml', 'jsonlite', 'dplyr', 'readr', 'sf', 'spdep', 'sn'), repos='https://cloud.r-project.org')" \
   && R -q -e "library(INLA); INLA::inla.prune()"
 
 # Strip debug symbols and remove unnecessary files to reduce size

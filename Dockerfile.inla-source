@@ -113,7 +113,7 @@ RUN mkdir -p /opt/r-inla/rinla/inst/bin/linux/64bit \
 RUN cd /opt/r-inla && R CMD build rinla && R CMD INSTALL INLA_*.tar.gz
 
 # Install fmesher R package and additional packages for INLA_baseline_model
-RUN R -q -e "install.packages(c('fmesher', 'dlnm', 'yaml', 'jsonlite', 'dplyr', 'sf', 'spdep'), repos='https://cloud.r-project.org')"
+RUN R -q -e "install.packages(c('fmesher', 'dlnm', 'yaml', 'jsonlite', 'dplyr', 'readr', 'sf', 'spdep', 'sn'), repos='https://cloud.r-project.org')"
 
 # Prune INLA cache
 RUN R -q -e "library(INLA); INLA::inla.prune()"
