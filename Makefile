@@ -48,19 +48,22 @@ size:
 	@docker images $(INLA_MINI_IMAGE):latest --format "  $(INLA_MINI_IMAGE):\t{{.Size}}" 2>/dev/null || echo "  $(INLA_MINI_IMAGE):\tnot built"
 
 # Test targets
-.PHONY: test test-base test-inla test-inla-mini
+.PHONY: test test-base test-inla test-inla-mini submodules
 
-test: test-base test-inla test-inla-mini
+submodules:
+	@git submodule update --init --recursive
 
-test-base:
+test: submodules test-base test-inla test-inla-mini
+
+test-base: submodules
 	@echo "Testing $(BASE_IMAGE) with minimalist_example_r..."
 	docker run --rm -v $(PWD)/test-repos/minimalist_example_r:/app -w /app $(BASE_IMAGE):latest Rscript isolated_run.r
 
-test-inla:
+test-inla: submodules
 	@echo "Testing $(INLA_IMAGE) with chap_model_template_r..."
 	docker run --rm --platform linux/amd64 -v $(PWD)/test-repos/chap_model_template_r:/app -w /app $(INLA_IMAGE):latest Rscript isolated_run.r
 
-test-inla-mini:
+test-inla-mini: submodules
 	@echo "Testing $(INLA_MINI_IMAGE) with chap_model_template_r..."
 	docker run --rm --platform linux/amd64 -v $(PWD)/test-repos/chap_model_template_r:/app -w /app $(INLA_MINI_IMAGE):latest Rscript isolated_run.r
 
