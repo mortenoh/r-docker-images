@@ -127,6 +127,8 @@ jobs:
     if: github.event_name != 'pull_request'
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Test my-r-base with minimalist_example_r
         run: |

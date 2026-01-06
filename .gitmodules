@@ -1,0 +1,6 @@
+[submodule "test-repos/minimalist_example_r"]
+	path = test-repos/minimalist_example_r
+	url = https://github.com/dhis2-chap/minimalist_example_r.git
+[submodule "test-repos/chap_model_template_r"]
+	path = test-repos/chap_model_template_r
+	url = https://github.com/dhis2-chap/chap_model_template_r.git
