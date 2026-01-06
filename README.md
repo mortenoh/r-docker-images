@@ -10,8 +10,8 @@ Docker images for R with optional INLA (Integrated Nested Laplace Approximation)
 | Image | Size | Architecture | Description |
 |-------|------|--------------|-------------|
 | `my-r-base` | ~437 MB | native (amd64/arm64) | Base R runtime |
-| `my-r-inla` | ~550 MB | amd64 only | R + INLA + build tools |
-| `my-r-inla-mini` | ~250 MB | amd64 only | R + INLA optimized (smallest) |
+| `my-r-inla` | ~2.2 GB | amd64 only | R + INLA + build tools |
+| `my-r-inla-mini` | ~846 MB | amd64 only | R + INLA optimized (smaller) |
 
 **Note:** INLA only provides x86_64 Linux binaries. The INLA images must be built and run with `--platform linux/amd64` on ARM systems (e.g., Apple Silicon). The base image builds for native architecture.
 
