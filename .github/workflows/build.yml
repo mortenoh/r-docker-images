@@ -132,14 +132,12 @@ jobs:
 
       - name: Test my-r-base with minimalist_example_r
         run: |
-          mkdir -p ${{ github.workspace }}/test-repos/minimalist_example_r/output
           docker run --rm -v ${{ github.workspace }}/test-repos/minimalist_example_r:/app -w /app \
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/my-r-base:latest \
             Rscript isolated_run.r
 
       - name: Test my-r-inla with chap_model_template_r
         run: |
-          mkdir -p ${{ github.workspace }}/test-repos/chap_model_template_r/output
           docker run --rm -v ${{ github.workspace }}/test-repos/chap_model_template_r:/app -w /app \
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/my-r-inla:latest \
             Rscript isolated_run.r
@@ -151,7 +149,6 @@ jobs:
 
       - name: Test my-r-inla-mini with chap_model_template_r
         run: |
-          mkdir -p ${{ github.workspace }}/test-repos/chap_model_template_r/output
           docker run --rm -v ${{ github.workspace }}/test-repos/chap_model_template_r:/app -w /app \
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/my-r-inla-mini:latest \
             Rscript isolated_run.r
