@@ -17,8 +17,8 @@ help:
 	@echo "Test targets:"
 	@echo "  make test            - Run all tests"
 	@echo "  make test-base       - Test $(BASE_IMAGE) with minimalist_example_r"
-	@echo "  make test-inla       - Test $(INLA_IMAGE) with INLA_baseline_model"
-	@echo "  make test-inla-mini  - Test $(INLA_MINI_IMAGE) with INLA_baseline_model"
+	@echo "  make test-inla       - Test $(INLA_IMAGE) with chap_model_template_r"
+	@echo "  make test-inla-mini  - Test $(INLA_MINI_IMAGE) with chap_model_template_r"
 	@echo ""
 	@echo "Other targets:"
 	@echo "  make size            - Show image sizes"
@@ -57,12 +57,12 @@ test-base:
 	docker run --rm -v $(PWD)/test-repos/minimalist_example_r:/app -w /app $(BASE_IMAGE):latest Rscript isolated_run.r
 
 test-inla:
-	@echo "Testing $(INLA_IMAGE) with INLA_baseline_model..."
-	docker run --rm --platform linux/amd64 -v $(PWD)/test-repos/INLA_baseline_model:/app -w /app $(INLA_IMAGE):latest Rscript isolated_run.R
+	@echo "Testing $(INLA_IMAGE) with chap_model_template_r..."
+	docker run --rm --platform linux/amd64 -v $(PWD)/test-repos/chap_model_template_r:/app -w /app $(INLA_IMAGE):latest Rscript isolated_run.r
 
 test-inla-mini:
-	@echo "Testing $(INLA_MINI_IMAGE) with INLA_baseline_model..."
-	docker run --rm --platform linux/amd64 -v $(PWD)/test-repos/INLA_baseline_model:/app -w /app $(INLA_MINI_IMAGE):latest Rscript isolated_run.R
+	@echo "Testing $(INLA_MINI_IMAGE) with chap_model_template_r..."
+	docker run --rm --platform linux/amd64 -v $(PWD)/test-repos/chap_model_template_r:/app -w /app $(INLA_MINI_IMAGE):latest Rscript isolated_run.r
 
 # Clean: remove all images (force, ignore errors)
 .PHONY: clean

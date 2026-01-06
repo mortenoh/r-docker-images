@@ -134,14 +134,24 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/my-r-base:latest \
             Rscript isolated_run.r
 
-      - name: Test my-r-inla with INLA_baseline_model
+      - name: Test my-r-inla with chap_model_template_r
         run: |
-          docker run --rm -v ${{ github.workspace }}/test-repos/INLA_baseline_model:/app -w /app \
+          docker run --rm -v ${{ github.workspace }}/test-repos/chap_model_template_r:/app -w /app \
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/my-r-inla:latest \
-            Rscript isolated_run.R
+            Rscript isolated_run.r
 
-      - name: Test my-r-inla-mini with INLA_baseline_model
+      - name: Smoke test INLA library loads
         run: |
-          docker run --rm -v ${{ github.workspace }}/test-repos/INLA_baseline_model:/app -w /app \
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/my-r-inla:latest \
+            Rscript -e "library(INLA); cat('INLA version:', inla.version()[[1]], '\n')"
+
+      - name: Test my-r-inla-mini with chap_model_template_r
+        run: |
+          docker run --rm -v ${{ github.workspace }}/test-repos/chap_model_template_r:/app -w /app \
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/my-r-inla-mini:latest \
-            Rscript isolated_run.R
+            Rscript isolated_run.r
+
+      - name: Smoke test INLA-mini library loads
+        run: |
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/my-r-inla-mini:latest \
+            Rscript -e "library(INLA); cat('INLA version:', inla.version()[[1]], '\n')"
