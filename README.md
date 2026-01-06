@@ -72,9 +72,9 @@ The GitHub Actions workflow (`.github/workflows/build.yml`) automatically:
 
 ## Test Repositories
 
-The `test-repos/` directory contains sample projects for testing:
+The `test-repos/` directory contains git submodules for testing:
 - `minimalist_example_r/` - Basic R linear regression (tests my-r-base)
-- `INLA_baseline_model/` - INLA spatial model (tests my-r-inla*)
+- `chap_model_template_r/` - R model template with readr (tests my-r-inla*)
 
 ## Architecture Notes
 
