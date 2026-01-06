@@ -29,15 +29,15 @@ build: submodules build-base build-inla build-inla-mini
 
 .PHONY: build-base
 build-base:
-	docker build --quiet --no-cache -t $(BASE_IMAGE):latest -f Dockerfile .
+	docker build --quiet -t $(BASE_IMAGE):latest -f Dockerfile .
 
 .PHONY: build-inla
 build-inla:
-	docker build --quiet --no-cache --platform linux/amd64 -t $(INLA_IMAGE):latest -f Dockerfile.inla .
+	docker build --quiet --platform linux/amd64 -t $(INLA_IMAGE):latest -f Dockerfile.inla .
 
 .PHONY: build-inla-mini
 build-inla-mini:
-	docker build --quiet --no-cache --platform linux/amd64 -t $(INLA_MINI_IMAGE):latest -f Dockerfile.inla-mini .
+	docker build --quiet --platform linux/amd64 -t $(INLA_MINI_IMAGE):latest -f Dockerfile.inla-mini .
 
 # Show image sizes (virtual size includes shared base layers)
 .PHONY: size
