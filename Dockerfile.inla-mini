@@ -1,44 +1,24 @@
-# Dockerfile.inla-mini
-# Multi-stage: build INLA in a dev image, then copy into a minimal runtime
+# R + INLA + Python 3.13 on Debian 13 (trixie), size-optimized.
+# Stage 1 builds INLA with the full toolchain; stage 2 keeps only the
+# R interpreter, runtime shared libs, and the compiled site-library.
 
 #############################
 # Stage 1: build INLA
 #############################
-FROM ubuntu:24.04 AS inla-builder
+FROM debian:trixie-slim AS inla-builder
 
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+  LANG=C.UTF-8 \
+  LC_ALL=C.UTF-8
 
-# Locale
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends locales \
-  && locale-gen en_US.UTF-8 \
-  && update-locale LANG=en_US.UTF-8 \
-  && rm -rf /var/lib/apt/lists/*
-
-ENV LANG=en_US.UTF-8 \
-  LC_ALL=en_US.UTF-8
-
-# Tools + HTTPS + GPG
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-  wget \
   ca-certificates \
-  gnupg \
-  && rm -rf /var/lib/apt/lists/*
-
-# CRAN key + repo for Ubuntu 24.04 (noble)
-RUN wget -qO /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
-  https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc \
-  && echo "deb https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/" \
-  > /etc/apt/sources.list.d/cran-r.list
-
-# Full R + build toolchain and headers
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
   r-base \
   r-base-dev \
   build-essential \
   gfortran \
+  cmake \
   libcurl4-openssl-dev \
   libssl-dev \
   libxml2-dev \
@@ -46,13 +26,12 @@ RUN apt-get update \
   libgdal-dev \
   libgeos-dev \
   libproj-dev \
-  # Dependencies for units package
   libudunits2-dev \
-  # Dependencies for s2 and nloptr packages
-  cmake \
+  # Parity with dhis2-chap/docker_r_inla
+  libgsl-dev \
+  libfontconfig1-dev \
   && rm -rf /var/lib/apt/lists/*
 
-# Install fmesher + INLA (dep=FALSE to avoid huge Suggests) + required packages
 RUN R -q -e "install.packages('fmesher', \
   repos = c('https://cloud.r-project.org', \
   INLA = 'https://inla.r-inla-download.org/R/stable'))" \
@@ -60,62 +39,48 @@ RUN R -q -e "install.packages('fmesher', \
   repos = c('https://cloud.r-project.org', \
   INLA = 'https://inla.r-inla-download.org/R/stable'), \
   dep = FALSE)" \
-  && R -q -e "install.packages(c('dlnm', 'yaml', 'jsonlite', 'dplyr', 'readr', 'sf', 'spdep', 'sn'), repos='https://cloud.r-project.org')" \
+  && R -q -e "install.packages(c('dlnm', 'yaml', 'jsonlite', 'dplyr', 'readr', \
+  'sf', 'spdep', 'sn', 'tsModel', 'xgboost', 'pak'), \
+  repos='https://cloud.r-project.org')" \
   && R -q -e "library(INLA); INLA::inla.prune()"
 
-# Strip debug symbols and remove unnecessary files to reduce size
+# Strip debug symbols and remove docs/help to trim the site-library.
 RUN find /usr/local/lib/R/site-library -name "*.so" -exec strip --strip-debug {} \; 2>/dev/null || true \
   && find /usr/local/lib/R/site-library -type d -name "help" -exec rm -rf {} + 2>/dev/null || true \
   && find /usr/local/lib/R/site-library -type d -name "doc" -exec rm -rf {} + 2>/dev/null || true \
   && find /usr/local/lib/R/site-library -type d -name "html" -exec rm -rf {} + 2>/dev/null || true \
   && find /usr/local/lib/R/site-library -name "*.pdf" -delete 2>/dev/null || true
-# At this point, INLA + deps are in /usr/local/lib/R/site-library
 
 
 #############################
 # Stage 2: minimal runtime
 #############################
-FROM ubuntu:24.04
+FROM debian:trixie-slim
 
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+  LANG=C.UTF-8 \
+  LC_ALL=C.UTF-8
 
-# Locale in runtime
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends locales \
-  && locale-gen en_US.UTF-8 \
-  && update-locale LANG=en_US.UTF-8 \
-  && rm -rf /var/lib/apt/lists/*
-
-ENV LANG=en_US.UTF-8 \
-  LC_ALL=en_US.UTF-8
-
-# Basic tools + HTTPS (no compilers)
+# Minimal R interpreter + non-dev shared libs for the compiled R
+# packages copied from the builder, plus Python 3.13 for chapkit.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-  wget \
   ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-
-# CRAN key + repo (so r-base is same build as builder stage)
-RUN wget -qO /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
-  https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc \
-  && echo "deb https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/" \
-  > /etc/apt/sources.list.d/cran-r.list
-
-# Minimal R runtime + non-dev shared libs
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
   r-base \
-  libcurl4 \
-  libssl3 \
+  libcurl4t64 \
+  libssl3t64 \
   libxml2 \
   # Runtime libraries for sf package
-  libgdal34t64 \
+  libgdal36 \
   libgeos-c1t64 \
-  libgeos3.12.1t64 \
   libproj25 \
-  # Runtime library for units package
   libudunits2-0 \
+  # Parity runtime libs
+  libgsl28 \
+  libfontconfig1 \
+  # Python runtime for downstream chapkit services
+  python3 \
+  python3-venv \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
