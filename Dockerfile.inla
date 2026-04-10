@@ -1,41 +1,22 @@
-# Dockerfile.inla
-# Single-stage: Ubuntu 24.04 + CRAN R + INLA (with fmesher)
+# R + INLA + Python 3.13 on Debian 13 (trixie).
+# Single-stage: R 4.5 and Python 3.13 come from distro apt; INLA and
+# its R-package friends come from CRAN and the INLA binary repo.
 
-FROM ubuntu:24.04
+FROM debian:trixie-slim
 
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+  LANG=C.UTF-8 \
+  LC_ALL=C.UTF-8
 
-# Locale (UTF-8 for R)
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends locales \
-  && locale-gen en_US.UTF-8 \
-  && update-locale LANG=en_US.UTF-8 \
-  && rm -rf /var/lib/apt/lists/*
-
-ENV LANG=en_US.UTF-8 \
-  LC_ALL=en_US.UTF-8
-
-# Basic tools + HTTPS + GPG
+# R toolchain + INLA build deps + spatial libs + Python 3.13 for chapkit consumers.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-  wget \
   ca-certificates \
-  gnupg \
-  && rm -rf /var/lib/apt/lists/*
-
-# CRAN key + repo for Ubuntu 24.04 (noble)
-RUN wget -qO /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc \
-  https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc \
-  && echo "deb https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/" \
-  > /etc/apt/sources.list.d/cran-r.list
-
-# R + toolchain needed to build INLA and its deps
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
   r-base \
   r-base-dev \
   build-essential \
   gfortran \
+  cmake \
   libcurl4-openssl-dev \
   libssl-dev \
   libxml2-dev \
@@ -43,13 +24,17 @@ RUN apt-get update \
   libgdal-dev \
   libgeos-dev \
   libproj-dev \
-  # Dependencies for units package
   libudunits2-dev \
-  # Dependencies for s2 and nloptr packages
-  cmake \
+  # Parity with dhis2-chap/docker_r_inla
+  libgsl-dev \
+  libfontconfig1-dev \
+  # Python runtime for downstream chapkit services
+  python3 \
+  python3-venv \
   && rm -rf /var/lib/apt/lists/*
 
-# Install fmesher + INLA (dep=FALSE to avoid huge Suggests) + required packages
+# Install fmesher, INLA (dep=FALSE to avoid the huge Suggests chain),
+# and the chap-parity R package set in one layer.
 RUN R -q -e "install.packages('fmesher', \
   repos = c('https://cloud.r-project.org', \
   INLA = 'https://inla.r-inla-download.org/R/stable'))" \
@@ -57,7 +42,9 @@ RUN R -q -e "install.packages('fmesher', \
   repos = c('https://cloud.r-project.org', \
   INLA = 'https://inla.r-inla-download.org/R/stable'), \
   dep = FALSE)" \
-  && R -q -e "install.packages(c('dlnm', 'yaml', 'jsonlite', 'dplyr', 'readr', 'sf', 'spdep', 'sn'), repos='https://cloud.r-project.org')" \
+  && R -q -e "install.packages(c('dlnm', 'yaml', 'jsonlite', 'dplyr', 'readr', \
+  'sf', 'spdep', 'sn', 'tsModel', 'xgboost', 'pak'), \
+  repos='https://cloud.r-project.org')" \
   && R -q -e "library(INLA); INLA::inla.prune()"
 
 WORKDIR /workspace
